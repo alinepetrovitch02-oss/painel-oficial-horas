@@ -5,7 +5,7 @@ Projeto estático com endpoint serverless para consulta da única aba disponíve
 ## Estrutura
 
 - `index.html`: interface do painel.
-- `api/consulta.js`: consulta os dados atuais da planilha oficial, sem cache, e preserva a posição original de cada registro.
+- `api/consulta.js`: consulta os dados atuais da planilha oficial, sem cache, e preserva o número da linha de cada registro como sua posição na planilha.
 - `package.json`: metadados mínimos do projeto.
 - `vercel.json`: configuração básica da Vercel.
 
