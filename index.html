@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -83,7 +84,7 @@ footer{text-align:center;color:#92949c;font-size:9px;line-height:1.5;margin:13px
     <article class="card green"><div class="label">ACEITO</div><div id="approved" class="big">—</div><div id="approvedMinutes" class="minutes">— min</div><div class="sub">Aceitas pela revisão</div></article>
     <article class="card yellow"><div class="label">PENDENTE</div><div id="pending" class="big">—</div><div id="pendingMinutes" class="minutes">— min</div><div class="sub">Aguardando revisão</div></article>
     <article class="card red"><div class="label">REJEITADO</div><div id="rejected" class="big">—</div><div id="rejectedMinutes" class="minutes">— min</div><div class="sub">Não aprovadas</div></article>
-    <article class="card rank"><div class="label">Posição no ranking geral</div><div id="rank" class="big">—</div><div id="rankTotal" class="sub">Posição original na planilha oficial</div></article>
+    <article class="card rank"><div class="label">Sua posição na planilha</div><div id="rank" class="big">—</div><div id="rankTotal" class="sub">Número da linha na planilha oficial</div></article>
   </section>
 </section>
 <footer>
@@ -113,7 +114,7 @@ async function lookup(email){
     document.getElementById("accountStatus").textContent=accountLabels[accountStatus]||"Indisponível";
     document.getElementById("accountDot").className="dot "+(accountStatus==="active"?"active":accountStatus==="inactive"?"inactive":"unknown");
     document.getElementById("rank").textContent=data.rank?"#"+data.rank:"Indisponível";
-    document.getElementById("rankTotal").textContent=data.rank?"Posição original na planilha oficial":"Posição não disponível para esta conta";
+    document.getElementById("rankTotal").textContent=data.rank?"Número da linha na planilha oficial":"Posição não disponível para esta conta";
     results.style.display="block";status("Consulta concluída.");
   }catch(error){results.style.display="none";status(error.message||"Falha na consulta.",true)}
   finally{submitButton.disabled=false}
