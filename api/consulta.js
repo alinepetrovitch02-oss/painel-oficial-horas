@@ -1,6 +1,12 @@
 
 const SPREADSHEET_ID = "12xySs3rAxCTSAtBBbJMzceCUhXlTktz6rdJoJa6HfSM";
 
+// Nomes exatos das abas da planilha oficial.
+const NOVEMBER_SHEET = "November Leaderboard";
+const BONUS_SHEET = "10-Day Bonus (Nov 25 - Dec 4)";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function parseCsv(text) {
   const rows = [];
   let row = [], cell = "", quoted = false;
@@ -88,12 +94,13 @@ function formatMinutes(value) {
   return Math.round(parseHours(raw) * 60);
 }
 
-async function readSheet() {
+async function readSheet(sheetName) {
   const url = new URL(
     `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq`
   );
 
   url.searchParams.set("tqx", "out:csv");
+  url.searchParams.set("sheet", sheetName);
   url.searchParams.set("_", String(Date.now()));
 
   const response = await fetch(url, {
@@ -119,6 +126,33 @@ async function readSheet() {
   return parseCsv(csv);
 }
 
+// Ranking do Day Bônus: posição normal (1, 2, 3...) na ordem da aba, sem somar nada.
+function findBonusRank(rows, email) {
+  let emailCol = 1;
+  let start = 0;
+
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const col = rows[i].findIndex(h => normalize(h) === "email");
+    if (col >= 0) {
+      emailCol = col;
+      start = i + 1;
+      break;
+    }
+  }
+
+  const list = rows.slice(start)
+    .map(row => String(row[emailCol] ?? "").trim().toLowerCase())
+    .filter(e => EMAIL_RE.test(e));
+
+  const idx = list.indexOf(email);
+
+  return {
+    status: idx >= 0 ? "ok" : "not_found",
+    rank: idx >= 0 ? idx + 1 : null,
+    total: list.length
+  };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -136,7 +170,14 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const rows = await readSheet();
+    // A aba de novembro é obrigatória; o Day Bônus não pode derrubar a consulta.
+    const [rows, bonusRows] = await Promise.all([
+      readSheet(NOVEMBER_SHEET),
+      readSheet(BONUS_SHEET).catch(err => {
+        console.error("Falha ao ler o Day Bônus:", err.message);
+        return null;
+      })
+    ]);
 
     let headerRowIndex = -1;
     let acceptedCol = -1;
@@ -221,6 +262,10 @@ module.exports = async function handler(req, res) {
         ? "inactive"
         : "unknown";
 
+    const bonus = bonusRows
+      ? findBonusRank(bonusRows, email)
+      : { status: "unavailable", rank: null, total: 0 };
+
     return res.status(200).json({
       email,
       period: "Dados atuais",
@@ -234,6 +279,9 @@ module.exports = async function handler(req, res) {
       rejectedMinutes: target.rejectedMinutes,
       accountStatus,
       rank: target.sheetPosition,
+      bonusRank: bonus.rank,
+      bonusTotal: bonus.total,
+      bonusStatus: bonus.status,
       accountActive: accountStatus === "active",
       fetchedAt: new Date().toISOString(),
       source: "Planilha oficial"
