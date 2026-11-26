@@ -45,10 +45,14 @@ button:disabled{opacity:.55;cursor:wait}
 .label{font-size:12px;font-weight:700}
 .big{font-size:25px;font-weight:800;margin:7px 0 2px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
 .minutes{font-size:9px;line-height:1.2;opacity:.68;margin:0 0 3px;font-variant-numeric:tabular-nums}.sub{font-size:10px;line-height:1.45;opacity:.82}
-.rank{grid-column:1/-1;background:#222b3b;border:1px solid #43516a;color:#fff;min-height:88px}
+.rank{background:#222b3b;border:1px solid #43516a;color:#fff;min-height:108px}
 .rank .label{color:#dce6f5}
 .rank .big{color:var(--gold);font-size:29px}
 .rank .sub{color:#c4ccda}
+.rank.bonus{background:linear-gradient(145deg,#4a3410,#2a1f0a 70%);border:1px solid #d8ac43;box-shadow:0 0 18px #d8ac4328,inset 0 1px 0 #ffffff14}
+.rank.bonus .label{color:#f5d477}
+.rank.bonus .big{color:#ffd770;text-shadow:0 0 14px #d8ac4366}
+.rank.bonus .sub{color:#e6d3a0}
 footer{text-align:center;color:#92949c;font-size:9px;line-height:1.5;margin:13px 4px 2px}.footer-summary{margin:0 2px 8px;color:#aeb1ba;font-size:9px;line-height:1.45}.footer-summary strong{display:block;color:#c4c6cd;font-size:10px;font-weight:700;margin-bottom:2px}
 @media(max-width:380px){body{padding:10px}main{padding:11px}.big{font-size:22px}.card{padding:10px}.period{font-size:9px}}
 </style>
@@ -84,7 +88,8 @@ footer{text-align:center;color:#92949c;font-size:9px;line-height:1.5;margin:13px
     <article class="card green"><div class="label">ACEITO</div><div id="approved" class="big">—</div><div id="approvedMinutes" class="minutes">— min</div><div class="sub">Aceitas pela revisão</div></article>
     <article class="card yellow"><div class="label">PENDENTE</div><div id="pending" class="big">—</div><div id="pendingMinutes" class="minutes">— min</div><div class="sub">Aguardando revisão</div></article>
     <article class="card red"><div class="label">REJEITADO</div><div id="rejected" class="big">—</div><div id="rejectedMinutes" class="minutes">— min</div><div class="sub">Não aprovadas</div></article>
-    <article class="card rank"><div class="label">Sua posição na planilha</div><div id="rank" class="big">—</div><div id="rankTotal" class="sub">Número da linha na planilha oficial</div></article>
+    <article class="card rank"><div class="label">POSIÇÃO NOVEMBER</div><div id="rank" class="big">—</div><div id="rankTotal" class="sub">November Leaderboard</div></article>
+    <article class="card rank bonus"><div class="label">🏆 RANKING DAY BÔNUS</div><div id="bonusRank" class="big">—</div><div id="bonusTotal" class="sub">10-Day Bonus · Nov 25 - Dec 4</div></article>
   </section>
 </section>
 <footer>
@@ -114,7 +119,11 @@ async function lookup(email){
     document.getElementById("accountStatus").textContent=accountLabels[accountStatus]||"Indisponível";
     document.getElementById("accountDot").className="dot "+(accountStatus==="active"?"active":accountStatus==="inactive"?"inactive":"unknown");
     document.getElementById("rank").textContent=data.rank?"#"+data.rank:"Indisponível";
-    document.getElementById("rankTotal").textContent=data.rank?"Número da linha na planilha oficial":"Posição não disponível para esta conta";
+    document.getElementById("rankTotal").textContent=data.rank?"Linha na aba November Leaderboard":"Posição não disponível para esta conta";
+    const bonusEl=document.getElementById("bonusRank"),bonusSub=document.getElementById("bonusTotal");
+    if(data.bonusStatus==="ok"){bonusEl.textContent="#"+data.bonusRank;bonusSub.textContent="de "+data.bonusTotal+" no Day Bônus";}
+    else if(data.bonusStatus==="not_found"){bonusEl.textContent="—";bonusSub.textContent="Você ainda não aparece no Day Bônus";}
+    else{bonusEl.textContent="Indisponível";bonusSub.textContent="Não foi possível ler a aba do Day Bônus";}
     results.style.display="block";status("Consulta concluída.");
   }catch(error){results.style.display="none";status(error.message||"Falha na consulta.",true)}
   finally{submitButton.disabled=false}

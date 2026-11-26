@@ -1,6 +1,6 @@
 # Painel Oficial de Horas
 
-Projeto estático com endpoint serverless para consulta da única aba disponível na planilha oficial. O nome da aba pode mudar sem exigir alteração no projeto.
+Projeto estático com endpoint serverless para consulta das abas **November Leaderboard** (dados e posição principal) e **10-Day Bonus (Nov 25 - Dec 4)** (ranking do Day Bônus, posição simples 1, 2, 3… sem somar linhas). Se os nomes das abas mudarem, ajuste `NOVEMBER_SHEET` e `BONUS_SHEET` no topo de `api/consulta.js`.
 
 ## Estrutura
 
