@@ -20,7 +20,8 @@ function parseCsv(text) {
       cell = "";
     } else if ((c === "\n" || c === "\r") && !quoted) {
       if (c === "\r" && next === "\n") i++;
-      rows.push(row.concat(cell));
+      row.push(cell);
+      if (row.some(v => String(v).trim() !== "")) rows.push(row);
       row = [];
       cell = "";
     } else {
@@ -125,43 +126,42 @@ module.exports = async function handler(req, res) {
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return res.status(405).json({
-      error: "Método não permitido."
-    });
+    return res.status(405).json({ error: "Método não permitido." });
   }
 
   const email = String(req.body?.email || "").trim().toLowerCase();
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({
-      error: "Digite um e-mail válido."
-    });
+    return res.status(400).json({ error: "Digite um e-mail válido." });
   }
 
   try {
     const rows = await readSheet();
 
     let headerRowIndex = -1;
-    let emailCol = -1;
     let acceptedCol = -1;
     let pendingCol = -1;
     let rejectedCol = -1;
     let statusCol = -1;
     let totalHoursCol = -1;
 
+    // O e-mail está fixamente na coluna B (índice 1).
+    const emailCol = 1;
+
     for (let i = 0; i < Math.min(rows.length, 20); i++) {
       const headers = rows[i];
 
-      const e = findHeaderIndex(headers, ["Email", "E-mail", "User Email"]);
       const a = findHeaderIndex(headers, ["Accepted Hrs", "Accepted Hours", "Horas aceitas", "Horas aprovadas"]);
       const p = findHeaderIndex(headers, ["Pending Hrs", "Pending Hours", "Horas pendentes", "Horas em análise"]);
       const r = findHeaderIndex(headers, ["Rejected Hrs", "Rejected Hours", "Horas rejeitadas"]);
       const s = findHeaderIndex(headers, ["Account Status", "Status da conta", "Status"]);
       const t = findHeaderIndex(headers, ["Total Hrs"]);
 
-      if (e >= 0 && a >= 0 && p >= 0 && r >= 0 && s >= 0 && t === 3) {
+      if (
+        normalize(headers[emailCol]) === "email" &&
+        a >= 0 && p >= 0 && r >= 0 && s >= 0 && t === 3
+      ) {
         headerRowIndex = i;
-        emailCol = e;
         acceptedCol = a;
         pendingCol = p;
         rejectedCol = r;
@@ -172,19 +172,15 @@ module.exports = async function handler(req, res) {
     }
 
     if (headerRowIndex < 0) {
-      throw new Error(
-        "Não localizei os cabeçalhos esperados ou a coluna D com o cabeçalho Total Hrs."
-      );
+      throw new Error("Não localizei os cabeçalhos esperados. Confira se Email está na coluna B e Total Hrs na coluna D.");
     }
 
-    // Primeiro, mantém somente os registros com e-mail válido.
     const validRows = rows.slice(headerRowIndex + 1)
       .filter(row => {
         const rowEmail = String(row[emailCol] ?? "").trim().toLowerCase();
-        return rowEmail && rowEmail.includes("@");
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rowEmail);
       });
 
-    // Depois, calcula a posição sequencial e soma 5.
     const records = validRows.map((row, index) => ({
       email: String(row[emailCol] ?? "").trim().toLowerCase(),
 
@@ -193,8 +189,7 @@ module.exports = async function handler(req, res) {
       rejectedDisplay: formatSheetHours(row[rejectedCol]),
 
       totalHoursRaw: String(row[totalHoursCol] ?? "").trim(),
-      totalHoursDisplay:
-        String(row[totalHoursCol] ?? "").trim() || "Indisponível",
+      totalHoursDisplay: String(row[totalHoursCol] ?? "").trim() || "Indisponível",
 
       approvedMinutes: formatMinutes(row[acceptedCol]),
       pendingMinutes: formatMinutes(row[pendingCol]),
@@ -202,7 +197,7 @@ module.exports = async function handler(req, res) {
 
       status: normalize(row[statusCol]),
 
-      // Primeiro registro = 6, segundo = 7, terceiro = 8.
+      // Primeiro registro válido = 6.
       sheetPosition: index + 6
     }));
 
@@ -215,13 +210,9 @@ module.exports = async function handler(req, res) {
     }
 
     const inactiveStatuses = [
-      "inactive",
-      "inativa",
-      "inativo",
-      "disabled",
-      "deactivated",
-      "desativada",
-      "desativado"
+      "inactive", "inativa", "inativo",
+      "disabled", "deactivated",
+      "desativada", "desativado"
     ];
 
     const accountStatus = ["active", "ativa", "ativo"].includes(target.status)
@@ -233,23 +224,17 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       email,
       period: "Dados atuais",
-
       approved: target.acceptedDisplay,
       pending: target.pendingDisplay,
       rejected: target.rejectedDisplay,
       totalHours: target.totalHoursDisplay,
-
       totalMinutes: formatMinutes(target.totalHoursRaw),
       approvedMinutes: target.approvedMinutes,
       pendingMinutes: target.pendingMinutes,
       rejectedMinutes: target.rejectedMinutes,
-
       accountStatus,
-
       rank: target.sheetPosition,
-
       accountActive: accountStatus === "active",
-
       fetchedAt: new Date().toISOString(),
       source: "Planilha oficial"
     });
