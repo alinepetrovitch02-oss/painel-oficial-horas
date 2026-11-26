@@ -177,30 +177,34 @@ module.exports = async function handler(req, res) {
       );
     }
 
-    const records = rows.slice(headerRowIndex + 1)
-      .map((row, index) => ({
-        email: String(row[emailCol] ?? "").trim().toLowerCase(),
+    // Primeiro, mantém somente os registros com e-mail válido.
+    const validRows = rows.slice(headerRowIndex + 1)
+      .filter(row => {
+        const rowEmail = String(row[emailCol] ?? "").trim().toLowerCase();
+        return rowEmail && rowEmail.includes("@");
+      });
 
-        acceptedDisplay: formatSheetHours(row[acceptedCol]),
-        pendingDisplay: formatSheetHours(row[pendingCol]),
-        rejectedDisplay: formatSheetHours(row[rejectedCol]),
+    // Depois, calcula a posição sequencial e soma 5.
+    const records = validRows.map((row, index) => ({
+      email: String(row[emailCol] ?? "").trim().toLowerCase(),
 
-        totalHoursRaw: String(row[totalHoursCol] ?? "").trim(),
-        totalHoursDisplay:
-          String(row[totalHoursCol] ?? "").trim() || "Indisponível",
+      acceptedDisplay: formatSheetHours(row[acceptedCol]),
+      pendingDisplay: formatSheetHours(row[pendingCol]),
+      rejectedDisplay: formatSheetHours(row[rejectedCol]),
 
-        approvedMinutes: formatMinutes(row[acceptedCol]),
-        pendingMinutes: formatMinutes(row[pendingCol]),
-        rejectedMinutes: formatMinutes(row[rejectedCol]),
+      totalHoursRaw: String(row[totalHoursCol] ?? "").trim(),
+      totalHoursDisplay:
+        String(row[totalHoursCol] ?? "").trim() || "Indisponível",
 
-        status: normalize(row[statusCol]),
+      approvedMinutes: formatMinutes(row[acceptedCol]),
+      pendingMinutes: formatMinutes(row[pendingCol]),
+      rejectedMinutes: formatMinutes(row[rejectedCol]),
 
-        // Ranking sequencial acrescido de 5.
-        sheetPosition: index + 6
-      }))
-      .filter(record =>
-        record.email && record.email.includes("@")
-      );
+      status: normalize(row[statusCol]),
+
+      // Primeiro registro = 6, segundo = 7, terceiro = 8.
+      sheetPosition: index + 6
+    }));
 
     const target = records.find(record => record.email === email);
 
