@@ -141,10 +141,6 @@ module.exports = async function handler(req, res) {
   try {
     const rows = await readSheet();
 
-    // A primeira pessoa começa na linha física 6.
-    // O índice 5 do array corresponde à linha 6.
-    const START_INDEX = 5;
-
     let headerRowIndex = -1;
     let emailCol = -1;
     let acceptedCol = -1;
@@ -153,8 +149,7 @@ module.exports = async function handler(req, res) {
     let statusCol = -1;
     let totalHoursCol = -1;
 
-    // Os cabeçalhos são procurados nas primeiras cinco linhas.
-    for (let i = 0; i < Math.min(rows.length, START_INDEX); i++) {
+    for (let i = 0; i < Math.min(rows.length, 20); i++) {
       const headers = rows[i];
 
       const e = findHeaderIndex(headers, ["Email", "E-mail", "User Email"]);
@@ -177,11 +172,12 @@ module.exports = async function handler(req, res) {
     }
 
     if (headerRowIndex < 0) {
-      throw new Error("Não localizei os cabeçalhos esperados ou a coluna D com o cabeçalho Total Hrs.");
+      throw new Error(
+        "Não localizei os cabeçalhos esperados ou a coluna D com o cabeçalho Total Hrs."
+      );
     }
 
-    // Procura os e-mails a partir da linha 6.
-    const records = rows.slice(START_INDEX)
+    const records = rows.slice(headerRowIndex + 1)
       .map((row, index) => ({
         email: String(row[emailCol] ?? "").trim().toLowerCase(),
 
@@ -199,8 +195,8 @@ module.exports = async function handler(req, res) {
 
         status: normalize(row[statusCol]),
 
-        // Posição sequencial começando na linha 6.
-        sheetPosition: START_INDEX + index + 1
+        // Ranking sequencial acrescido de 5.
+        sheetPosition: index + 6
       }))
       .filter(record =>
         record.email && record.email.includes("@")
@@ -247,6 +243,7 @@ module.exports = async function handler(req, res) {
       accountStatus,
 
       rank: target.sheetPosition,
+
       accountActive: accountStatus === "active",
 
       fetchedAt: new Date().toISOString(),
